@@ -8,13 +8,13 @@ This is an experiment in what AI agents can build and verify, not trading advice
 
 | Episode | Source | Download, results and video |
 | --- | --- | --- |
-| Turtle Trading rules | [`turtle-rules/`](turtle-rules/) | https://r4lph.io/free/turtle-rules |
+| Turtle Trading rules | [`turtle-rules/`](turtle-rules/) | https://r4lph.io/free-trading-systems/turtle-rules |
 
 Each folder has a README with the steps to load the script in TradingView and to run the Python.
 
 ## Get the code
 
-- Download an episode's zip from its page at https://r4lph.io/free. The zip has the same files as the folder here.
+- Download an episode's zip from its page at https://r4lph.io/free-trading-systems. The zip has the same files as the folder here.
 - Or clone this repository.
 
 The videos are on YouTube at https://www.youtube.com/@r4lphio.
