@@ -1,0 +1,141 @@
+//@version=6
+// Turtle Trading rules, as written in "The Original Turtle Trading Rules" (Curtis Faith and others, 2003),
+// and as tested in r4lph's video "My AI Backtested the Famous Turtle Trading Rules Overnight".
+// One symbol, daily bars. Free to use and change. Research and education, not trading advice.
+//
+// The rules:
+//   N      20-day Wilder average of the true range (ta.rma of ta.tr), the same as the Python backtest.
+//   Unit   (risk % of the account) / N shares, so a 1 N move changes the account by that %.
+//          The default 0.1% is the size that held up in the test. The original rule is 1%.
+//   Entry  System 1: 20-day breakout. Skip it if the last 20-day breakout was not a loser (a loser hits its
+//          2 N stop before its 10-day exit), but take a 55-day breakout (the fail-safe).
+//          System 2: 55-day breakout, no filter.
+//   Adds   One more unit each 1/2 N past the last fill, up to 4 units.
+//   Stop   2 N behind the last fill, for every unit.
+//   Exit   System 1: 10-day breakout the other way. System 2: 20-day breakout the other way.
+//          The nearer of the stop and the exit breakout closes the whole position.
+//   Size   When the account falls 10% below its value at the start of the year, size as if it were 20%
+//          smaller; each further 10% fall (compounded: 81%, 72.9%...) takes another 20% off.
+// Costs: 0.05% commission per side (5 basis points) and no slippage, the same as the backtest. Change them in
+// the strategy's Settings, Properties tab. Margin is 0 (no margin calls), like the backtest, so 1% sizing can
+// use leverage. For a cash account, set the margin to 100 in the Properties tab.
+//
+// Known small differences from the Python backtest: TradingView's prices and dividend adjustments, whole shares,
+// no interest on cash, one add per bar (Python can add several units on a gap), a position cannot close and
+// reopen on the same bar (except a reversal on a bar that breaks both channels), and the order of fills inside
+// a bar that touches both an add and the stop.
+strategy("Turtle Rules (r4lph)", shorttitle = "Turtle", overlay = false,
+     pyramiding = 4,
+     initial_capital = 10000000,
+     commission_type = strategy.commission.percent, commission_value = 0.05,
+     slippage = 0,
+     margin_long = 0, margin_short = 0)
+
+// ---- Inputs --------------------------------------------------------------------------------------------------
+const string SYS1 = "System 1: 20-day entry, 10-day exit"
+const string SYS2 = "System 2: 55-day entry, 20-day exit"
+string sysChoice = input.string(SYS2, "System", options = [SYS1, SYS2])
+float riskPct = input.float(0.1, "Risk per unit (% of account per N)", minval = 0.01, maxval = 5.0, step = 0.05,
+     tooltip = "0.1 is the size that held up in the test. 1 is the original Turtle rule.")
+bool useFilter = input.bool(true, "System 1: skip a breakout after a winning one")
+bool useDDRule = input.bool(true, "Trade smaller after a 10% drop in the year")
+int startTime = input.time(timestamp("18 May 2007 00:00 +0000"), "Place orders from")
+int endTime = input.time(timestamp("06 Nov 2026 00:00 +0000"), "End: close all, no new orders from",
+     tooltip = "Set this to a future date to run the strategy up to today.")
+
+bool isSys1 = sysChoice == SYS1
+
+// ---- N and the Donchian channels ----------------------------------------------------------------------------
+// Each channel includes today's bar, so an order placed at today's close works from tomorrow's open.
+float n = ta.rma(ta.tr(true), 20)
+float hi10 = ta.highest(high, 10)
+float lo10 = ta.lowest(low, 10)
+float hi20 = ta.highest(high, 20)
+float lo20 = ta.lowest(low, 20)
+float hi55 = ta.highest(high, 55)
+float lo55 = ta.lowest(low, 55)
+float exitHi = isSys1 ? hi10 : hi20
+float exitLo = isSys1 ? lo10 : lo20
+
+// ---- System 1 filter: the hypothetical trade from every 20-day breakout, taken or not ------------------------
+// A breakout counts as a loser when its 2 N stop is hit before its 10-day exit. While a skipped breakout's
+// hypothetical trade is still open, only the 55-day fail-safe may enter.
+var int hypSide = 0
+var float hypStop = na
+var bool hypSkipped = false
+var bool lastWon = false
+if hypSide == 1 and (low <= hypStop or low <= lo10[1])
+    bool lost = hypStop >= lo10[1] and low <= hypStop
+    lastWon := not lost
+    hypSide := 0
+else if hypSide == -1 and (high >= hypStop or high >= hi10[1])
+    bool lost = hypStop <= hi10[1] and high >= hypStop
+    lastWon := not lost
+    hypSide := 0
+bool upBreak = high >= hi20[1]
+bool downBreak = low <= lo20[1]
+int brk = upBreak and not downBreak ? 1 : downBreak and not upBreak ? -1 : 0
+if brk != 0 and hypSide == 0
+    hypSkipped := useFilter and lastWon
+    hypSide := brk
+    hypStop := (brk == 1 ? hi20[1] : lo20[1]) - brk * 2 * n[1]
+bool skipNext = isSys1 and ((hypSide != 0 and hypSkipped) or (hypSide == 0 and useFilter and lastWon))
+float entryHi = isSys1 and not skipNext ? hi20 : hi55
+float entryLo = isSys1 and not skipNext ? lo20 : lo55
+
+// ---- Unit size ----------------------------------------------------------------------------------------------
+var float yearStart = strategy.initial_capital
+if not na(time[1]) and year(time) != year(time[1])
+    yearStart := strategy.equity[1]
+float equityNow = strategy.equity
+float sizeEquity = equityNow
+if useDDRule and equityNow < yearStart * 0.9
+    int steps = int(math.floor(math.log(equityNow / yearStart) / math.log(0.9) + 1e-9))
+    sizeEquity := math.min(equityNow, yearStart * math.pow(0.8, steps))
+float unitQty = math.floor(riskPct / 100 * sizeEquity / n)
+
+// ---- Orders -------------------------------------------------------------------------------------------------
+float pos = strategy.position_size
+int units = strategy.opentrades
+var float nEntry = na  // N on the day before the first unit filled; adds and stops use it
+if pos != 0 and pos[1] == 0
+    nEntry := n[1]
+bool inWindow = time >= startTime and time < endTime
+float stopLevel = na
+
+if time >= endTime
+    strategy.cancel_all()
+    if pos != 0
+        strategy.close_all(comment = "End of test")
+else if pos == 0
+    for orderId in array.from("L2", "L3", "L4", "S2", "S3", "S4")
+        strategy.cancel(orderId)
+    if inWindow and unitQty > 0
+        strategy.entry("L1", strategy.long, qty = unitQty, stop = entryHi)
+        strategy.entry("S1", strategy.short, qty = unitQty, stop = entryLo)
+    else
+        strategy.cancel("L1")
+        strategy.cancel("S1")
+else if pos > 0
+    strategy.cancel("S1")
+    float lastFill = strategy.opentrades.entry_price(units - 1)
+    if units < 4 and unitQty > 0
+        strategy.entry("L" + str.tostring(units + 1), strategy.long, qty = unitQty, stop = lastFill + 0.5 * nEntry)
+    stopLevel := math.max(lastFill - 2 * nEntry, exitLo)
+    strategy.exit("XL", stop = stopLevel, comment = "Long exit")
+else
+    strategy.cancel("L1")
+    float lastFill = strategy.opentrades.entry_price(units - 1)
+    if units < 4 and unitQty > 0
+        strategy.entry("S" + str.tostring(units + 1), strategy.short, qty = unitQty, stop = lastFill - 0.5 * nEntry)
+    stopLevel := math.min(lastFill + 2 * nEntry, exitHi)
+    strategy.exit("XS", stop = stopLevel, comment = "Short exit")
+
+// ---- Plots --------------------------------------------------------------------------------------------------
+// The channels and the stop go on the price chart; N gets its own pane below it.
+plot(entryHi, "Entry channel high", color.new(color.teal, 0), 2, plot.style_stepline, force_overlay = true)
+plot(entryLo, "Entry channel low", color.new(color.red, 0), 2, plot.style_stepline, force_overlay = true)
+plot(exitHi, "Exit channel high", color.new(color.teal, 60), 1, plot.style_stepline, force_overlay = true)
+plot(exitLo, "Exit channel low", color.new(color.red, 60), 1, plot.style_stepline, force_overlay = true)
+plot(stopLevel, "Position exit level", color.new(color.orange, 0), 2, plot.style_linebr, force_overlay = true)
+plot(n, "N (20-day average true range)", color.new(color.orange, 0), 2)
