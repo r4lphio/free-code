@@ -16,6 +16,8 @@
 //          The nearer of the stop and the exit breakout closes the whole position.
 //   Size   When the account falls 10% below its value at the start of the year, size as if it were 20%
 //          smaller; each further 10% fall (compounded: 81%, 72.9%...) takes another 20% off.
+// Dates: orders start on 18 May 2007 (or the first bar after it) and run up to today. To match the SPY check
+// in spy-check.md, turn on "Stop at an end date" in the Inputs; the date is 6 Nov 2026, the test's last day.
 // Costs: 0.05% commission per side (5 basis points) and no slippage, the same as the backtest. Change them in
 // the strategy's Settings, Properties tab. Margin is 0 (no margin calls), like the backtest, so 1% sizing can
 // use leverage. For a cash account, set the margin to 100 in the Properties tab.
@@ -40,8 +42,9 @@ float riskPct = input.float(0.1, "Risk per unit (% of account per N)", minval = 
 bool useFilter = input.bool(true, "System 1: skip a breakout after a winning one")
 bool useDDRule = input.bool(true, "Trade smaller after a 10% drop in the year")
 int startTime = input.time(timestamp("18 May 2007 00:00 +0000"), "Place orders from")
-int endTime = input.time(timestamp("06 Nov 2026 00:00 +0000"), "End: close all, no new orders from",
-     tooltip = "Set this to a future date to run the strategy up to today.")
+bool useEnd = input.bool(false, "Stop at an end date",
+     tooltip = "Off: the strategy runs up to today. On: it closes all and places no new orders from the end date. Turn it on for the SPY check in spy-check.md.")
+int endTime = input.time(timestamp("06 Nov 2026 00:00 +0000"), "End date")
 
 bool isSys1 = sysChoice == SYS1
 
@@ -100,10 +103,14 @@ int units = strategy.opentrades
 var float nEntry = na  // N on the day before the first unit filled; adds and stops use it
 if pos != 0 and pos[1] == 0
     nEntry := n[1]
-bool inWindow = time >= startTime and time < endTime
+bool ended = useEnd and time >= endTime
+bool inWindow = time >= startTime and not ended
 float stopLevel = na
 
-if time >= endTime
+// The exit and the next add are one-cancels-other: when the exit fills, the add is cancelled, so it cannot open
+// a new position later in the same bar. The exit is a plain order for the whole position, so TradingView lists
+// each unit as one trade.
+if ended
     strategy.cancel_all()
     if pos != 0
         strategy.close_all(comment = "End of test")
@@ -119,17 +126,21 @@ else if pos == 0
 else if pos > 0
     strategy.cancel("S1")
     float lastFill = strategy.opentrades.entry_price(units - 1)
-    if units < 4 and unitQty > 0
-        strategy.entry("L" + str.tostring(units + 1), strategy.long, qty = unitQty, stop = lastFill + 0.5 * nEntry)
     stopLevel := math.max(lastFill - 2 * nEntry, exitLo)
-    strategy.exit("XL", stop = stopLevel, comment = "Long exit")
+    strategy.order("XL", strategy.short, qty = pos, stop = stopLevel, oca_name = "turtle",
+         oca_type = strategy.oca.cancel, comment = "Long exit")
+    if units < 4 and unitQty > 0
+        strategy.entry("L" + str.tostring(units + 1), strategy.long, qty = unitQty, stop = lastFill + 0.5 * nEntry,
+             oca_name = "turtle", oca_type = strategy.oca.cancel)
 else
     strategy.cancel("L1")
     float lastFill = strategy.opentrades.entry_price(units - 1)
-    if units < 4 and unitQty > 0
-        strategy.entry("S" + str.tostring(units + 1), strategy.short, qty = unitQty, stop = lastFill - 0.5 * nEntry)
     stopLevel := math.min(lastFill + 2 * nEntry, exitHi)
-    strategy.exit("XS", stop = stopLevel, comment = "Short exit")
+    strategy.order("XS", strategy.long, qty = -pos, stop = stopLevel, oca_name = "turtle",
+         oca_type = strategy.oca.cancel, comment = "Short exit")
+    if units < 4 and unitQty > 0
+        strategy.entry("S" + str.tostring(units + 1), strategy.short, qty = unitQty, stop = lastFill - 0.5 * nEntry,
+             oca_name = "turtle", oca_type = strategy.oca.cancel)
 
 // ---- Plots --------------------------------------------------------------------------------------------------
 // The channels and the stop go on the price chart; N gets its own pane below it.

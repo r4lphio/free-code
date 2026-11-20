@@ -34,13 +34,6 @@ download can give slightly different numbers from the video.
 2. No entry fills inside the breakout range of earlier days, so no entry uses future prices.
 3. Closed trade profit + open positions + interest equals the change in the account, to the cent.
 
-## One correction to know about
-
-The first version of this engine, used for the video's System 1 numbers, skipped a breakout after a
-winner for one day only. The original rule skips the whole breakout. This code uses the original rule.
-`--loose-filter` (in `spy_check.py` and `run_portfolio.py`) or `Config(loose_filter=True)` reproduces the
-first version. System 2 has no filter, so its numbers are the same in both.
-
 ## Assumptions
 
 - Daily prices, dividend adjusted. Orders are stop orders; a gap through a level fills at the open.

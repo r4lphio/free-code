@@ -4,7 +4,7 @@ Pine defaults: System 2 (55-day), 0.1% of the account per N, 5 bps commission pe
 $10,000,000 account, whole shares not enforced (TradingView rounds down; the effect is tiny at this size),
 and no interest on cash (TradingView pays none).
 
-Usage: python spy_check.py data [--symbol SPY] [--system 2] [--risk 0.001] [--interest] [--loose-filter]
+Usage: python spy_check.py data [--symbol SPY] [--system 2] [--risk 0.001] [--interest]
 """
 
 import argparse
@@ -22,13 +22,12 @@ def main() -> None:
     ap.add_argument("--risk", type=float, default=0.001)
     ap.add_argument("--cost-bps", type=float, default=5.0)
     ap.add_argument("--interest", action="store_true", help="pay T-bill interest on cash, as the portfolio test does")
-    ap.add_argument("--loose-filter", action="store_true")
     a = ap.parse_args()
 
     prices = pd.read_parquet(f"{a.data_dir}/prices.parquet")
     one = prices.loc[:, (slice(None), [a.symbol])]
     tbill = pd.read_parquet(f"{a.data_dir}/tbill.parquet")["irx"] if a.interest else None
-    cfg = Config(system=a.system, risk=a.risk, cost_bps=a.cost_bps, loose_filter=a.loose_filter)
+    cfg = Config(system=a.system, risk=a.risk, cost_bps=a.cost_bps)
     res = run(one, cfg, tbill)
     st = stats(res.equity, res.trades)
     tr = res.trades

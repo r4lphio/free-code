@@ -48,8 +48,6 @@ class Config:
     side_units: int = 12
     use_dd_rule: bool = True
     use_filter: bool = True  # System 1 only
-    # The episode's first engine skipped only the day of a skipped breakout. True reproduces that version.
-    loose_filter: bool = False
     pyramid: bool = True
     cost_bps: float = 5.0
     start_equity: float = 10_000_000.0
@@ -224,9 +222,8 @@ def run(prices: pd.DataFrame, cfg: Config, tbill: pd.Series | None = None) -> Re
                     last_won[j], hyp_side[j] = not lost, 0
             up, dn = h[t, j] >= hi_in[t, j], l[t, j] <= lo_in[t, j]
             brk = 1 if up and not dn else -1 if dn and not up else 0
-            skip = False
-            if cfg.system == 1 and not cfg.loose_filter and hyp_side[j] != 0 and hyp_skipped[j]:
-                skip = True  # still inside a skipped breakout: only the 55-day fail-safe may enter
+            # While a skipped breakout's hypothetical trade is open, only the 55-day fail-safe may enter.
+            skip = cfg.system == 1 and hyp_side[j] != 0 and bool(hyp_skipped[j])
             if cfg.system == 1 and brk and hyp_side[j] == 0:
                 skip = cfg.use_filter and last_won[j]
                 hyp_skipped[j] = skip

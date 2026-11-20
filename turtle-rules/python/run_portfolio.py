@@ -1,7 +1,7 @@
 """Run both Turtle systems on the whole portfolio at several unit sizes, before and after costs.
 
-Usage: python run_portfolio.py data [--loose-filter]
-Prints a table and writes results/portfolio.csv. --loose-filter reproduces the episode's first System 1 numbers.
+Usage: python run_portfolio.py data
+Prints a table and writes results/portfolio.csv.
 """
 
 import argparse
@@ -32,9 +32,8 @@ def one(cfg: Config) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("data_dir")
-    ap.add_argument("--loose-filter", action="store_true")
     a = ap.parse_args()
-    base = Config(loose_filter=a.loose_filter)
+    base = Config()
     cases = [replace(base, system=s, risk=r, cost_bps=c)
              for s in (1, 2) for r in (0.001, 0.0025, 0.005, 0.01) for c in (0.0, 5.0)]
     with ProcessPoolExecutor(initializer=load, initargs=(a.data_dir,)) as pool:

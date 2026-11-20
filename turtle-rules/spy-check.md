@@ -1,7 +1,8 @@
 # SPY cross-check: Python against TradingView
 
 Use these numbers to check the Pine script in TradingView's Strategy Tester. They come from the Python
-engine in `python/`, run on SPY alone with the Pine script's default settings:
+engine in `python/`, run on SPY alone with the Pine script's default settings. In TradingView, also turn on
+**Stop at an end date** in the Inputs, so the test ends on 6 November 2026 like the Python run:
 
 ```
 python spy_check.py data                 # the defaults below
@@ -20,7 +21,7 @@ python spy_check.py data --system 1      # System 1 instead
 | Adds, stop | 1 more unit each 1/2 N, up to 4 units; stop 2 N behind the last fill |
 | Costs | 0.05% commission per side (5 basis points), no slippage |
 | Account | $10,000,000, no interest on cash |
-| Dates | Orders from the close of 18 May 2007; last day 6 November 2026 |
+| Dates | Orders from the close of 18 May 2007; last day 6 November 2026 (turn on "Stop at an end date") |
 
 ## Python results (System 2, 0.1%, no interest)
 
@@ -40,18 +41,21 @@ With T-bill interest on cash, as in the portfolio test: CAGR +1.56%, max drawdow
 System 1 (0.1%, no interest): 179 positions, CAGR -0.41%, max drawdown 10.55%, net -7.71%.
 System 2 at the original 1%: CAGR -0.39%, max drawdown 65.02%, net -7.65%.
 
-## What TradingView should show
+## What TradingView shows
 
-| Strategy Tester | Expect | Why it is not exact |
-|---|---|---|
-| Total closed trades | about 388 | TradingView counts every unit as a trade: 386, plus the 2 open units it closes at the end |
-| Net profit | about +4.7% (about $468,000) | the last 2 units close at the 9 Nov open, not the 6 Nov close |
-| Max equity drawdown | about 11% | TradingView can measure inside the bar; Python uses daily closes |
-| Percent profitable | not comparable | TradingView counts winning units, not winning positions |
+We ran the script in TradingView on 19 November 2026: SPY, daily, dividend adjusted, default settings,
+"Stop at an end date" on.
+
+| Strategy report | TradingView | Python | Why they differ |
+|---|---|---|---|
+| Total trades | 377 | 388 units (386 closed, 2 open) | TradingView counts every unit as a trade. It adds at most one unit per bar; Python can add several on a gap |
+| Total PnL | +5.80% ($580,364) | +4.68% ($467,998) | TradingView's prices, and the last 2 units close at the 9 Nov open, not the 6 Nov close |
+| Max drawdown | 7.32% | 8.00% on closed trades, 11.11% on daily closes | TradingView measures it on closed trades. Python's 11.11% also counts open trades |
+| Profitable trades | 33.4% (126 of 377) | 24.4% of positions | TradingView counts winning units, not winning positions |
 
 Small differences are normal: TradingView's own prices and dividend adjustment, whole shares, one add per
-bar, and the order of fills inside a bar. A large difference (for example a trade count far from 388) means
-a setting is off. Check the timeframe, the dividend adjustment, and the dates first.
+bar, and the order of fills inside a bar. A large difference (for example a trade count far from 377) means
+a setting is off. Check the timeframe, the dividend adjustment, the end date and the start date first.
 
 ## How this relates to the portfolio test
 

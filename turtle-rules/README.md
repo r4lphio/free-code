@@ -34,18 +34,18 @@ You now see:
 
 ## Read the Strategy Tester
 
-Open the **Strategy Tester** tab at the bottom. The **Overview** shows:
+Open the **Strategy Tester** (the strategy report) at the bottom. **Key stats** shows:
 
 | Number | What it means |
 |---|---|
-| Net profit | What the strategy made or lost, in dollars and percent of the starting $10,000,000 |
-| Total closed trades | Each Turtle unit counts as one trade, so a full position of 4 units is 4 trades |
-| Percent profitable | The share of those trades that made money. Trend following often wins only 20 to 35% |
-| Max equity drawdown | The largest fall from a high point of the account. This is the pain number |
+| Total PnL | What the strategy made or lost, in dollars and percent of the starting $10,000,000 |
+| Max drawdown | The largest fall of the account from a high point, on closed trades. This is the pain number |
+| Profitable trades | The share of trades that made money. Each Turtle unit counts as one trade, so a full position of 4 units is 4 trades. Trend following often wins only 20 to 35% |
 | Profit factor | Money won divided by money lost. Above 1 made money overall |
 
-The **List of trades** shows every entry and exit. On SPY with the default settings, compare your numbers
-with `spy-check.md`: about 388 closed trades, about +4.7% net profit, and about 11% max drawdown.
+The **List of trades** shows every entry and exit. To check that it works, load SPY, turn on **Stop at an end
+date** in the Inputs, and compare your numbers with `spy-check.md`: about 377 trades, about +5.8% total PnL,
+and about 7% max drawdown.
 
 ## Change the settings
 
@@ -54,7 +54,8 @@ Click the gear next to the strategy's name on the chart.
 - **Inputs**: pick System 1 (20-day breakouts) or System 2 (55-day breakouts), the risk per unit, the filter,
   the drawdown rule, and the dates. The default risk is 0.1% per N, the size that held up in the test.
   The original Turtle rule is 1%. Try it and look at the max drawdown.
-- The default end date is 6 November 2026, to match the test. Set it to a future date to run up to today.
+- The strategy runs up to today. For the SPY check, turn on **Stop at an end date** in the Inputs. The
+  date is 6 November 2026, the last day of the test.
 - **Properties**: the starting capital, the commission (0.05% per side, as in the test), slippage, and
   margin. Margin is 0 (no limit), as in the backtest. For a cash account, set it to 100.
 
@@ -74,12 +75,6 @@ symbol**. So the numbers will differ, and that's expected:
 If your SPY numbers are far from `spy-check.md`, check the timeframe (daily), the dividend adjustment,
 and the dates first. TradingView's free plan loads a limited number of past bars; if the chart doesn't
 reach back to 2007, the test starts later and the numbers change.
-
-## A correction
-
-The video's System 1 numbers came from a first version of the filter that skipped a breakout for one day
-only. The original rule, used in this code, skips the whole breakout. System 2, the video's main result, has
-no filter and is the same in both. `python/README.md` shows how to reproduce either version.
 
 ## The rules, in short
 
