@@ -1,6 +1,6 @@
 # Free code from "My AI Tests Famous Trading Systems"
 
-Each week an AI coding agent rebuilds a famous trading system overnight, checks its own work, and reports the result, good or bad. This repository has the code from each episode: a TradingView Pine Script v6 file and the Python backtest.
+Each week an AI coding agent rebuilds a famous trading system overnight, checks its own work, and reports the result, good or bad. This repository has the code from each episode: the Python backtest, and a TradingView Pine Script v6 file when the system fits on one chart.
 
 This is an experiment in what AI agents can build and verify, not trading advice. Past results do not predict future results.
 
@@ -8,10 +8,11 @@ This is an experiment in what AI agents can build and verify, not trading advice
 
 | Episode | Source | Download, results and video |
 | --- | --- | --- |
+| Tom Basso's trend rules | [`tom-basso/`](tom-basso/) | https://r4lph.io/free-trading-systems/tom-basso |
 | Gann square of nine | [`gann-square-of-nine/`](gann-square-of-nine/) | https://r4lph.io/free-trading-systems/gann-square-of-nine |
 | Turtle Trading rules | [`turtle-rules/`](turtle-rules/) | https://r4lph.io/free-trading-systems/turtle-rules |
 
-Each folder has a README with the steps to load the script in TradingView and to run the Python.
+Each folder has a README with the steps to run the Python and, when the episode has one, to load the script in TradingView.
 
 ## Get the code
 
