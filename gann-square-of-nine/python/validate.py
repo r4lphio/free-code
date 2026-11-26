@@ -2,16 +2,18 @@
 
 1. A second implementation, written separately in plain Python (no numba, no shared code), must give the same
    SPY trades (45 degrees, K = 10, 5 bps) as the engine, for the fade and the break: same dates, sides and prices.
-2. No look-ahead: cut the data at 40 random dates and run again (fade and break, Gann and random levels). Every
-   trade that ended before the cut must be the same as in the full run, and no earlier pivot may change.
+2. No look-ahead: cut the data at 80 random dates and run again (fade and break, Gann and random levels, pivots
+   with K = 5, 10 and 20). Every trade that ended before the cut must be the same as in the full run, and no
+   earlier anchor may change.
 3. Accounting: for every market and both modes, equity rebuilt from each trade's entry and exit prices and the
    cost rule equals the engine's equity.
 The reference also counts touches and holds, which must match. It shares the written rules with the engine, so it
 catches coding slips, not a wrong rule; and cuts at whole bars cannot catch a peek inside one bar.
 
-Usage: python validate.py <folder>
+Usage: python -I scripts/validate.py <backtest_dir>
 """
 
+import itertools
 import math
 import sys
 from pathlib import Path
@@ -113,61 +115,63 @@ def reference_spy(df: pd.DataFrame, follow: bool) -> list[tuple]:
 def main() -> None:
     bt = Path(sys.argv[1])
     prices = pd.read_parquet(bt / "data/prices.parquet")
-    (bt / "results").mkdir(exist_ok=True)
     syms = list(dict.fromkeys(prices.columns.get_level_values(1)))
     lines = []
 
     # 1. independent implementation, both modes
     spy = engine.market_frame(prices, "SPY")
-    for follow in (False, True):
+    for follow, anchor in itertools.product((False, True), (K,)):
         ref, rt, rh = reference_spy(spy, follow)
-        run = engine.run_market(spy, STEP, K, COST, follow=follow)
+        run = engine.run_market(spy, STEP, anchor, COST, follow=follow)
         eng = run.trades
         eng_t = [(int(r.entry_i), int(r.exit_i), int(r.side), r.entry, r.exit) for r in eng.itertuples()]
         same = len(ref) == len(eng_t) and all(
             a[:3] == b[:3] and abs(a[3] - b[3]) < 1e-9 and abs(a[4] - b[4]) < 1e-9 for a, b in zip(ref, eng_t))
-        lines.append(f"1{'b' if follow else 'a'}. Independent SPY implementation ({'break' if follow else 'fade'}): "
+        lines.append(f"1. Independent SPY implementation ({'break' if follow else 'fade'}, anchor {anchor}): "
                      f"{len(ref)} trades vs engine {len(eng_t)}; identical: {same}; touches {rt} vs {run.touches}, "
                      f"holds {rh} vs {run.holds}")
 
     # 2. look-ahead: truncate and rerun
     rng = np.random.default_rng(7)
     bad_trades = bad_pivots = checked = 0
-    for i in range(40):  # every 4th cut each: fade or break, Gann or random levels
+    for i in range(80):  # fade or break, Gann or random levels, three pivot sizes
         sym = syms[rng.integers(len(syms))]
         df = engine.market_frame(prices, sym)
         cut = int(rng.integers(300, len(df) - 50))
         follow, seed = bool(i % 2), (None if i % 4 < 2 else 1000 + i)
-        full = engine.run_market(df, STEP, K, COST, seed, follow=follow).trades
-        part = engine.run_market(df.iloc[:cut], STEP, K, COST, seed, follow=follow).trades
+        anchor = (5, 10, 20)[i // 4 % 3]
+        full = engine.run_market(df, STEP, anchor, COST, seed, follow=follow).trades
+        part = engine.run_market(df.iloc[:cut], STEP, anchor, COST, seed, follow=follow).trades
         f = full[full.exit_i < cut - 1].reset_index(drop=True)
         p = part[part.exit_i < cut - 1].reset_index(drop=True)
         cols = ["entry_i", "exit_i", "side", "entry", "exit"]
         if len(f) != len(p) or not np.allclose(f[cols].to_numpy(), p[cols].to_numpy()):
             bad_trades += 1
-        pf = engine.pivots(df.High.to_numpy(), df.Low.to_numpy(), K)[0][:cut]
-        pp = engine.pivots(df.High.to_numpy()[:cut], df.Low.to_numpy()[:cut], K)[0]
+        pf = engine.anchors(df, anchor)[0][:cut]
+        pp = engine.anchors(df.iloc[:cut], anchor)[0]
         if not np.allclose(np.nan_to_num(pf), np.nan_to_num(pp)):
             bad_pivots += 1
         checked += 1
-    lines.append(f"2. Look-ahead: {checked} random cuts (fade and break, Gann and random); trades that changed when the future was removed: {bad_trades}; "
+    lines.append(f"2. Look-ahead: {checked} random cuts (fade and break, Gann and random, three pivot sizes); trades that changed when the future was removed: {bad_trades}; "
                  f"cuts where a past pivot changed: {bad_pivots}")
 
     # 3. accounting: rebuild equity from the trades' own prices and the cost rule, apart from the engine's ret column
     worst = 0.0
     for sym in syms:
-        for follow in (False, True):
-            r = engine.run_market(engine.market_frame(prices, sym), STEP, K, COST, follow=follow)
+        for follow, anchor in itertools.product((False, True), (K,)):
+            r = engine.run_market(engine.market_frame(prices, sym), STEP, anchor, COST, follow=follow)
             if r.trades.empty:
                 continue
             t = r.trades
             gross = t.side * (t.exit / t.entry - 1)
-            rebuilt = float(np.prod((1 - COST) ** 2 * (1 + gross)))
+            rebuilt = max(0.0, float(np.prod((1 - COST) ** 2 * (1 + gross))))  # zero equity closes the account
             last = int(t.exit_i.iloc[-1])  # a trade still open at the end: compare at the last exit
-            worst = max(worst, abs(rebuilt / r.equity.iloc[last] - 1))
+            e = r.equity.iloc[last]
+            worst = max(worst, abs(rebuilt - e) if e == 0 else abs(rebuilt / e - 1))
     lines.append(f"3. Accounting: equity rebuilt from trade prices and costs vs the engine's equity, {len(syms)} markets, "
                  f"both modes; largest relative gap {worst:.2e}")
     text = "\n".join(lines)
+    (bt / "results").mkdir(exist_ok=True)
     (bt / "results/validation.txt").write_text(text + "\n")
     print(text)
 

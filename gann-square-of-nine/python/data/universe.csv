@@ -1,0 +1,51 @@
+symbol,asset_class,yahoo,name,size_bn,size_measure,index_tracked,rank_in_source
+SPY,equity,SPY,SPDR S&P 500 ETF,791.97,AUM,S&P 500,3 (S&P 500 group: VOO 1; oldest kept)
+VTI,equity,VTI,Vanguard Total Stock Market ETF,679.44,AUM,Morningstar US Total Market,4
+QQQ,equity,QQQ,Invesco QQQ Trust,461.20,AUM,NASDAQ 100,5
+VEA,equity,VEA,Vanguard FTSE Developed Markets ETF,226.21,AUM,FTSE Developed ex US All Cap,6
+VUG,equity,VUG,Vanguard Growth ETF,213.88,AUM,Morningstar US Large Cap Growth,7
+VTV,equity,VTV,Vanguard Value ETF,195.27,AUM,Morningstar US Large Cap Value,8
+IEFA,equity,IEFA,iShares Core MSCI EAFE ETF,188.52,AUM,MSCI EAFE IMI,9
+VXUS,equity,VXUS,Vanguard Total International Stock ETF,159.68,AUM,FTSE Global All Cap ex US,11
+IEMG,equity,IEMG,iShares Core MSCI Emerging Markets ETF,140.73,AUM,MSCI Emerging Markets IMI,12
+VGT,equity,VGT,Vanguard Information Technology ETF,134.84,AUM,MSCI US IMI Information Technology 25/50,13
+SCHD,equity,SCHD,Schwab US Dividend Equity ETF,123.86,AUM,Dow Jones US Dividend 100,14
+IJH,equity,IJH,iShares Core S&P Mid-Cap ETF,121.94,AUM,S&P MidCap 400,15
+VIG,equity,VIG,Vanguard Dividend Appreciation ETF,116.69,AUM,S&P US Dividend Growers,16
+VWO,equity,VWO,Vanguard FTSE Emerging Markets ETF,115.82,AUM,FTSE Emerging Markets All Cap China A Inclusion,17
+IWF,equity,IWF,iShares Russell 1000 Growth ETF,114.42,AUM,Russell 1000 Growth,18
+XLK,equity,XLK,Technology Select Sector SPDR ETF,110.91,AUM,S&P Technology Select Sector,19
+VO,equity,VO,Vanguard Mid-Cap ETF,106.19,AUM,Morningstar US Mid Cap,20
+RSP,equity,RSP,Invesco S&P 500 Equal Weight ETF,104.62,AUM,S&P 500 Equal Weighted,22
+IJR,equity,IJR,iShares Core S&P Small-Cap ETF,104.47,AUM,S&P SmallCap 600,23
+ITOT,equity,ITOT,iShares Core S&P Total US Stock Market ETF,94.07,AUM,S&P Total Market,24
+IWD,equity,IWD,iShares Russell 1000 Value ETF,84.02,AUM,Russell 1000 Value,25
+VYM,equity,VYM,Vanguard High Dividend Yield ETF,82.97,AUM,FTSE High Dividend Yield,26
+VT,equity,VT,Vanguard Total World Stock ETF,82.58,AUM,FTSE Global All Cap,27
+VB,equity,VB,Vanguard Small-Cap ETF,78.03,AUM,Morningstar US Small Cap,28
+EFA,equity,EFA,iShares MSCI EAFE ETF,76.02,AUM,MSCI EAFE,29
+IWM,equity,IWM,iShares Russell 2000 ETF,75.46,AUM,Russell 2000,30
+SCHX,equity,SCHX,Schwab US Large-Cap ETF,72.02,AUM,Dow Jones US Large-Cap Total Stock Market,31
+IVW,equity,IVW,iShares S&P 500 Growth ETF,71.60,AUM,S&P 500 Growth,32
+SCHF,equity,SCHF,Schwab International Equity ETF,67.00,AUM,FTSE All-World Developed ex US,33
+VEU,equity,VEU,Vanguard FTSE All-World ex-US ETF,65.92,AUM,FTSE All-World ex US,34
+AGG,bond,AGG,iShares Core US Aggregate Bond ETF,137.46,AUM,Bloomberg US Aggregate,2 (Aggregate group: BND 1; oldest kept)
+BNDX,bond,BNDX,Vanguard Total International Bond ETF,84.89,AUM,Bloomberg Global Aggregate ex USD,4
+VCIT,bond,VCIT,Vanguard Intermediate-Term Corporate Bond ETF,68.41,AUM,Bloomberg US Corporate 5-10 Y,5
+MUB,bond,MUB,iShares National Muni Bond ETF,53.74,AUM,ICE AMT-Free US National Municipal,6
+VTEB,bond,VTEB,Vanguard Tax-Exempt Bond ETF,52.71,AUM,S&P National AMT-Free Municipal Bond,7
+IUSB,bond,IUSB,iShares Core Total USD Bond Market ETF,49.07,AUM,Bloomberg US Universal,9
+BSV,bond,BSV,Vanguard Short-Term Bond ETF,46.90,AUM,Bloomberg US Government/Credit 1-5 Y,10
+TLT,bond,TLT,iShares 20+ Year Treasury Bond ETF,46.51,AUM,ICE US Treasury 20+ Y,11
+GLD,commodity,GLD,SPDR Gold Shares,130.74,AUM,LBMA Gold Price (gold),1
+SLV,commodity,SLV,iShares Silver Trust,23.93,AUM,LBMA Silver Price (silver),1
+USO,commodity,USO,United States Oil Fund,2.42,AUM,Front-month WTI crude oil (crude oil),1
+UNG,commodity,UNG,United States Natural Gas Fund,0.50,AUM,Front-month natural gas (natural gas),1
+CPER,commodity,CPER,United States Copper Index Fund,0.58,AUM,SummerHaven Copper (copper),1
+DBA,commodity,DBA,Invesco DB Agriculture Fund,1.04,AUM,DBIQ Diversified Agriculture (agriculture),1
+PDBC,commodity,PDBC,Invesco Optimum Yield Diversified Commodity Strategy No K-1 ETF,7.22,AUM,active around DBIQ Optimum Yield Diversified (broad index),1
+BTC,crypto,BTC-USD,Bitcoin,1264.5,market cap,spot USD,1
+ETH,crypto,ETH-USD,Ethereum,217.3,market cap,spot USD,2
+BNB,crypto,BNB-USD,BNB,77.1,market cap,spot USD,4 (USDT 3 is a stablecoin)
+XRP,crypto,XRP-USD,XRP,61.8,market cap,spot USD,6 (USDC 5 is a stablecoin)
+SOL,crypto,SOL-USD,Solana,43.9,market cap,spot USD,7

@@ -1,6 +1,6 @@
 """Square-of-nine price levels as support and resistance: a daily backtest with a random-level baseline.
 
-The textbook formula (sources in ../README.md): from a pivot price P, the level that is `deg` degrees around the
+The textbook formula (see ../RESEARCH.md): from a pivot price P, the level that is `deg` degrees around the
 square of nine is (sqrt(P) + deg / 180) ** 2. One full turn (360 degrees) adds 2 to the square root, 180 adds 1,
 90 adds 0.5 and 45 adds 0.25. So the levels are evenly spaced in square-root space, anchored on the pivot.
 
@@ -22,6 +22,8 @@ Bar order  Daily bars don't say whether the high or the low came first. When it 
            reached it first; otherwise the path is open -> the nearer extreme -> the other extreme. Only the open decides, so neither the fade nor the
            break is favoured, and no decision uses the rest of the day.
 Costs      `cost` per side, as a fraction of traded value.
+Ruin       A short can lose more than 100% (the levels are very far apart on prices under about $1). When equity
+           reaches zero the market's account is closed: no more trades, equity stays at zero.
 All decisions on day t use only data up to day t (levels use data up to day t - 1).
 """
 
@@ -34,28 +36,39 @@ import pandas as pd
 HOLD_DAYS = 20
 
 
-def pivots(high: np.ndarray, low: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
-    """Return the active pivot price for each day (NaN before the first) and its pivot number (-1 before the
-    first): the latest swing high or low confirmed by the day before. A swing at bar i is confirmed at bar i + k."""
-    n = len(high)
+def pivot_events(high: np.ndarray, low: np.ndarray, k: int) -> list[tuple[int, float]]:
+    """(bar where it became known, price) for each K-bar swing high and low. A swing at bar i is known at i + k."""
+    events: list[tuple[int, float]] = []
+    for i in range(k, len(high) - k):
+        if high[i] == high[i - k : i + k + 1].max():
+            events.append((i + k, high[i]))
+        if low[i] == low[i - k : i + k + 1].min():
+            events.append((i + k, low[i]))
+    return sorted(events, key=lambda e: e[0])
+
+
+def active_anchor(events: list[tuple[int, float]], n: int) -> tuple[np.ndarray, np.ndarray]:
+    """The active anchor price for each day (NaN before the first) and its number (-1 before the first):
+    the latest event known by the day before."""
     out = np.full(n, np.nan)
     pid = np.full(n, -1)
-    events: list[tuple[int, float]] = []
-    for i in range(k, n - k):
-        win_h = high[i - k : i + k + 1]
-        win_l = low[i - k : i + k + 1]
-        if high[i] == win_h.max():
-            events.append((i + k, high[i]))
-        if low[i] == win_l.min():
-            events.append((i + k, low[i]))
-    events.sort(key=lambda e: e[0])
     cur, cid, e = np.nan, -1, 0
     for t in range(n):
-        while e < len(events) and events[e][0] <= t - 1:  # confirmed by yesterday
+        while e < len(events) and events[e][0] <= t - 1:  # known by yesterday
             cur, cid = events[e][1], e
             e += 1
         out[t], pid[t] = cur, cid
     return out, pid
+
+
+def pivots(high: np.ndarray, low: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
+    """The active K-bar pivot for each day (see active_anchor)."""
+    return active_anchor(pivot_events(high, low, k), len(high))
+
+
+def anchors(df: pd.DataFrame, k: int) -> tuple[np.ndarray, np.ndarray]:
+    """The active anchor for each day: the latest K-bar pivot (K = 5, 10, 20...)."""
+    return pivots(df.High.to_numpy(float), df.Low.to_numpy(float), k)
 
 
 @numba.njit(cache=True)
@@ -111,6 +124,7 @@ def _simulate(o, h, l, c, anchor, skip, step, follow, cost, hold_days):
     entry = stop = target = 0.0
     entry_i = 0
     equity = 1.0  # cash equity when flat
+    ruined = False  # a short can lose more than 100%; at zero equity the account is closed for good
     base = 1.0  # equity after the entry cost, for the open trade
     for t in range(1, n):
         # The levels next to yesterday's close, from the anchor known yesterday.
@@ -144,6 +158,9 @@ def _simulate(o, h, l, c, anchor, skip, step, follow, cost, hold_days):
                 if c[t] > ld:
                     holds += 1
 
+        if ruined:  # touches still count (they belong to the levels), but there is no more trading
+            eq[t] = 0.0
+            continue
         if pos != 0:
             ex = _exit_in_bar(pos, stop, target, o[t], h[t], l[t])
             if ex < 0 and t - entry_i >= hold_days:
@@ -159,9 +176,21 @@ def _simulate(o, h, l, c, anchor, skip, step, follow, cost, hold_days):
                 rows[nt, 5] = (1.0 - cost) ** 2 * (1.0 + gross) - 1.0
                 nt += 1
                 pos = 0
+                if equity <= 0.0:
+                    equity, ruined = 0.0, True
                 eq[t] = equity
                 continue  # no new entry on an exit day
             eq[t] = base * (1.0 + pos * (c[t] / entry - 1.0))
+            if eq[t] <= 0.0:  # wiped out while open: closed at this close, no more trading
+                rows[nt, 0] = entry_i
+                rows[nt, 1] = t
+                rows[nt, 2] = pos
+                rows[nt, 3] = entry
+                rows[nt, 4] = c[t]
+                rows[nt, 5] = (1.0 - cost) ** 2 * (1.0 + pos * (c[t] / entry - 1.0)) - 1.0
+                nt += 1
+                pos, equity, ruined = 0, 0.0, True
+                eq[t] = 0.0
             continue
         eq[t] = equity
         if not (hit_up or hit_dn):
@@ -218,10 +247,12 @@ def _simulate(o, h, l, c, anchor, skip, step, follow, cost, hold_days):
             rows[nt, 4] = ex
             rows[nt, 5] = (1.0 - cost) ** 2 * (1.0 + gross) - 1.0
             nt += 1
+            if equity <= 0.0:
+                equity, ruined = 0.0, True
             eq[t] = equity
             continue
         pos, entry, stop, target, entry_i = side, fill, s_, g_, t
-        eq[t] = base * (1.0 + side * (c[t] / fill - 1.0))
+        eq[t] = max(0.0, base * (1.0 + side * (c[t] / fill - 1.0)))
     return eq, touches, holds, rows[:nt]
 
 
@@ -233,19 +264,19 @@ class Run:
     trades: pd.DataFrame
 
 
-_PIVOTS: dict[tuple[int, int, int, int], tuple[np.ndarray, np.ndarray]] = {}
+_PIVOTS: dict[tuple, tuple[np.ndarray, np.ndarray]] = {}
 
 
 def run_market(df: pd.DataFrame, step: float, k: int, cost: float, phase_seed: int | None = None,
                skip_pivot: bool = False, follow: bool = False) -> Run:
-    """Run one market. phase_seed=None gives Gann levels; an int gives a random-phase lattice.
+    """Run one market. k is the anchor rule (see anchors()). phase_seed=None gives Gann levels; an int gives a random-phase lattice.
     skip_pivot=True leaves out the level nearest the pivot: the pivot itself for Gann, and the nearest
     random level for a random lattice, so both keep the same density.
     follow=True trades the break instead of the bounce (the mirror rule, same stops and targets swapped)."""
     o, h, l, c = (df[f].to_numpy(float) for f in ("Open", "High", "Low", "Close"))
     key = (len(df), hash(h.tobytes()), hash(l.tobytes()), k)
     if key not in _PIVOTS:
-        _PIVOTS[key] = pivots(h, l, k)
+        _PIVOTS[key] = anchors(df, k)
     piv, pid = _PIVOTS[key]
     root = np.sqrt(piv)
     phase = np.zeros(len(df))
