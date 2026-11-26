@@ -1,10 +1,10 @@
 # Free code: Gann's square of nine levels (basic version)
 
 From r4lph's video "My AI tested Gann's square of nine". My AI coding agent built this from public sources,
-tested it on 25 markets against random levels, and wrote this code. You can use it, change it, and share it.
+tested it on 50 markets against random levels, and wrote this code. You can use it, change it, and share it.
 
 This is a basic, educational version of the textbook method. It is research and education, not trading advice.
-In our test, these levels did no better than random levels with the same spacing.
+In our test, trading these levels lost money after costs, about the same as random levels with the same spacing.
 
 ## What's in this folder
 
@@ -55,13 +55,18 @@ To check it, set Anchor to "Manual price", type `348.11` (SPY's low on 13 Octobe
 
 ## What the test found
 
-My AI tested these levels on 24 ETFs (2007 to 2026) and Bitcoin (2014 to 2026), against 200 sets of random levels
-with the same spacing:
+My AI tested these levels on 50 markets: the 30 largest stock ETFs, the 8 largest bond ETFs, 7 commodity funds and
+the 5 largest coins (2007 to 2026, or from when the data starts), against 200 sets of random levels with the same
+spacing. It tried two ways to pick the anchor: the latest 10-day swing high or low (the one this indicator uses),
+and r4lph's own Gann swing indicator (2-bar swings), which is not part of this free code.
 
-- A touched Gann level held 40.6% of the time. Random levels held 40.6% too.
-- Trading the levels (fade the touch, or follow the break) lost money after costs, about the same as random levels.
-- On SPY alone, the levels looked good (better than 97% of random sets), and on a bond fund and a commodity fund too.
-  On utilities (XLU) they looked bad. Across all 25 markets, Gann beat the random middle in 13: a coin flip.
+- With 10-day swings, a touched Gann level held 42.0% of the time. Random levels held 41.7%: within luck.
+- With 2-bar Gann swings, Gann levels held 42.4%, better than 98% of random sets. A small edge, and part of it is
+  the swing high or low line itself.
+- Trading the levels (fade the touch, or follow the break) lost money after costs with both anchors, about the same
+  as random levels. Buying SPY and holding it made 8.7% a year.
+- On SPY alone, the levels looked good (better than 99% of random sets). Across 50 markets, only 3 did that well
+  with 10-day swings, about what luck gives.
 
 `python/` has the full test and its checks. Read `spy-check.md` for the SPY numbers.
 
