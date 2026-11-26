@@ -8,6 +8,7 @@ This is an experiment in what AI agents can build and verify, not trading advice
 
 | Episode | Source | Download, results and video |
 | --- | --- | --- |
+| Mars-Jupiter aspects | [`mars-jupiter/`](mars-jupiter/) | https://r4lph.io/free-trading-systems/mars-jupiter |
 | Tom Basso's trend rules | [`tom-basso/`](tom-basso/) | https://r4lph.io/free-trading-systems/tom-basso |
 | Gann square of nine | [`gann-square-of-nine/`](gann-square-of-nine/) | https://r4lph.io/free-trading-systems/gann-square-of-nine |
 | Turtle Trading rules | [`turtle-rules/`](turtle-rules/) | https://r4lph.io/free-trading-systems/turtle-rules |
