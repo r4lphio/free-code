@@ -1,0 +1,6 @@
+# Tested with Python 3.12, pandas 3.1.1, numpy 2.5.4, pyarrow 26.0.1, matplotlib 3.11.2, yfinance 1.8.0.
+pandas>=3.1
+numpy>=2.0
+pyarrow>=15
+matplotlib>=3.8  # only for charts.py
+yfinance>=0.2.40  # only for fetch.py
